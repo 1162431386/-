@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "cmd_queue.h": "c",
+        "iostream": "cpp",
+        "opencv.hpp": "c"
+    }
+}

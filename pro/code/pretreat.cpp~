@@ -1,0 +1,145 @@
+#include "pretreat.h"
+
+/*
+ * @brief  双目图像裁剪函数
+ * @param  1：原图像 2：竖直方向的裁剪 3：水平裁剪数 4：左图 5：右图
+ * @return 
+ */
+void Cut_img(Mat src_img, int m, int n, Mat *imgL, Mat *imgR)
+{
+    int t = m * n;
+    int height = src_img.rows;
+    int width = src_img.cols;
+
+    int ceil_height = height / m;
+    int ceil_width = width / n;
+    Mat roi_img;
+
+    for (int i = 0; i < m; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            Rect rect(j * ceil_width, i * ceil_height, ceil_width, ceil_height);
+            if (j == 0)
+            {
+                src_img(rect).copyTo(*imgR);
+            }
+            else
+            {
+                src_img(rect).copyTo(*imgL);
+            }
+        }
+    }
+}
+
+/*
+ * @brief  得到RG分量，并进行直方图均衡化
+ * @param  1：原图像 2：输出图像
+ * @return 
+ */
+void Enhancement(Mat src_img, Mat *enhancement)
+{
+    Mat RG, dst;
+    int g_nBilateralFilterValue = 16; //˫���˲�����ֵ(��ͨ������ȷ����
+    getRG(src_img, &RG);
+    //得到rg分量
+    bilateralFilter(RG, dst, -1, g_nBilateralFilterValue * 2, g_nBilateralFilterValue / 2);
+    //ֱ双边滤波
+    *enhancement = equalizeIntensityHist(dst); //直方图均衡化
+}
+
+/*
+ * @brief  得到RG分量
+ * @param  1：原图像 2：输出图像
+ * @return 
+ */
+void getRG(Mat src_img, Mat *RG) //过滤绿色
+{
+    Mat channel[3], img1;
+    split(src_img, channel); //多通道分离
+    //set blue channel to 0
+    channel[0] = Mat::zeros(src_img.rows, src_img.cols, CV_8UC1); ///相当于创建一张黑色的图，每个像素的每个通道都为0,
+    //merge red and green channels
+    merge(channel, 3, *RG); //多通道合并
+}
+
+
+/*
+ * @brief  直方图均衡化
+ * @param  1：原图像 2：输出图像
+ * @return 
+ */
+Mat equalizeIntensityHist(const Mat &inputImage)
+{
+    if (inputImage.channels() >= 3)
+    {
+        Mat ycrcb;
+
+        cvtColor(inputImage, ycrcb, COLOR_BGR2YCrCb);
+
+        vector<Mat> channels;
+        split(ycrcb, channels);
+
+        equalizeHist(channels[0], channels[0]);
+
+        Mat result;
+        merge(channels, ycrcb);
+
+        cvtColor(ycrcb, result, COLOR_YCrCb2BGR);
+
+        return result;
+    }
+
+    return Mat();
+}
+
+
+#if 0
+/*
+ * @brief  直方图归一化
+ * @param  onst Mat* images：输入图像
+ *int nimages：输入图像的个数
+ *const int* channels：需要统计直方图的第几通道
+ *InputArray mask：掩膜，，计算掩膜内的直方图  ...Mat()
+ *OutputArray hist:输出的直方图数组
+ *int dims：需要统计直方图通道的个数
+ *const int* histSize：指的是直方图分成多少个区间，就是 bin的个数
+ *const float** ranges： 统计像素值得区间
+ *bool uniform=true::是否对得到的直方图数组进行归一化处理
+ *bool accumulate=false：在多个图像时，是否累计计算像素值得个数
+ * @return 
+ */
+Mat Normalization(Mat srcImage, Mat *putImage)
+{
+    float hrange[] = {0, 255}; //所有的的灰度值范围
+    const float *ranges[] = {hrange};
+    int dims = 1;
+    int size = 256;
+    /*如果是彩色图像的话，传入的参数可以是 [0]， [1]， [2] 它们分别对应着通道 B， G， R。*/
+    int channels = 0; //如果输入图像是灰度图，它的值就是 [0]；
+    //输出的直方图dstHist   为一个一维数组[1*256]  其值为灰度值[0-256]对应点的出现频次
+    calcHist(srcImage, 1, &channels, Mat(), putImage, dims, &size, ranges);
+    //直方图绘制
+    int scale = 1;
+    int hist_h = scale * size, hist_w = size;
+    int bin_w = hist_w / size;                      //即bin_w=1;
+    Mat dstImage(hist_h, hist_w, CV_8U, Scalar(0)); //展示直方图的图纸的大小，颜色为黑色
+    //将 dstHist 归一化到[0,dstHist.rows]
+    normalize(dstHist, dstHist, 0, dstHist.rows, NORM_MINMAX, -1, Mat()); //归一化结果存在dstHist
+    /*这个for循环可以遍历下归一化后的直方图统计数值，看看是不是都在指定范围内*/
+    for (int i = 0; i < size; i++)
+    {
+        cout << cvRound(dstHist.at<float>(i)) << endl;
+    }
+    for (int i = 1; i < size; i++)
+    {
+        line(dstImage,
+             Point(bin_w * (i - 1), hist_h - cvRound(dstHist.at<float>(i - 1))),
+             Point(bin_w * (i), hist_h - cvRound(dstHist.at<float>(i))),
+             Scalar(255, 255, 255), 2, 8, 0);
+    }
+    imshow("1-Dhistogram ", dstImage);
+    return 0;
+
+}
+#endif

@@ -1,0 +1,55 @@
+#include "opencv_hpp.h"
+#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <fstream>
+#include <unistd.h>
+#include "pretreat.h"
+using namespace std;
+using namespace cv;
+
+Mat imgL, imgR;               //原始图像裁剪后图像
+Mat rectifyimgL, rectifyimgR; //校正后图像
+Mat enhancement;              //图像增强图像
+Mat just_img;                 //处理图像
+Mat segment;                  //分割后图像
+Mat result;                   //边缘检测图
+Mat Error_img;                // 凹区域
+extern Mat Q;
+/******************************* */
+int left_l = 310;
+int right_l = 420;
+int up_l = 137;
+int down_l = 479;
+//感兴趣区域的阈值，可根据滑动条定
+/************************************** */
+int main()
+{
+
+   Mat start_img;
+   ofstream outfile;                                //创建一个文件操作类
+   outfile.open("../result/result.txt");            //打开此目录下的txt文档，没有的话，则自动创建一个，不需要用户手创建
+   string dir_path = "/home/wwk/Desktop/img/*.png"; //图像存放路经。
+   vector<String> fileNames;
+   glob(dir_path, fileNames);
+   for (int i = 0; i < fileNames.size(); i++)
+   {
+      start_img = imread(fileNames[i]);
+      cvtColor(start_img, start_img, COLOR_BGR2GRAY);
+      //Normalization(start_img, &enhancement);
+      //Enhancement(start_img, &enhancement);
+      equalizeHist(start_img, &enhancement);
+      Cut_img(start_img, 1, 2, &imgL, &imgR);
+      //imshow("imgL", imgL);
+      //imshow("imgR", imgR);
+      imshow("Enhancement", enhancement);
+      cout << "***********第" << i << "张读取完毕**********" << endl;
+      cout << "正在写入文件......" << endl;
+      outfile << fileNames[i] << ":"
+              << "tikuan:" << 1 << ";	"
+              << "tichnag:" << 1 << ";	" << endl; //写入数据到txt文本
+      waitKey(1000);
+   }
+   outfile.close(); //关闭txt文本
+   return 0;
+}
